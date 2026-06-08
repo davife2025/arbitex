@@ -16,8 +16,9 @@ import { orderRoutes } from './routes/orders'
 // Plugins
 import { wsPlugin } from './plugins/ws'
 
-// Services
+// Background services
 import { startMarketPoller } from './services/market-poller'
+import { startSignalExpiryWorker } from './services/signal-expiry'
 
 const app = Fastify({
   logger: {
@@ -30,23 +31,19 @@ const app = Fastify({
 })
 
 async function bootstrap() {
-  // Core plugins
   await app.register(helmet)
   await app.register(cors, { origin: config.api.corsOrigin, credentials: true })
   await app.register(rateLimit, { max: 100, timeWindow: '1 minute' })
   await app.register(websocket)
 
-  // WebSocket handler
   await app.register(wsPlugin)
 
-  // REST Routes
   await app.register(healthRoutes, { prefix: '/health' })
   await app.register(marketRoutes, { prefix: '/api/market' })
   await app.register(portfolioRoutes, { prefix: '/api/portfolio' })
   await app.register(signalRoutes, { prefix: '/api/signals' })
   await app.register(orderRoutes, { prefix: '/api/orders' })
 
-  // Global error handler
   app.setErrorHandler((error, _req, reply) => {
     app.log.error(error)
     reply.status(error.statusCode ?? 500).send({
@@ -57,11 +54,14 @@ async function bootstrap() {
   })
 
   await app.listen({ port: config.api.port, host: '0.0.0.0' })
-  console.log(`\n🚀 Arbitex API running on port ${config.api.port}`)
-  console.log(`📡 WebSocket available at ws://localhost:${config.api.port}/ws\n`)
 
-  // Start background market polling
+  console.log(`\n🚀 Arbitex API  →  http://localhost:${config.api.port}`)
+  console.log(`📡 WebSocket    →  ws://localhost:${config.api.port}/ws`)
+  console.log(`🤖 AI Model     →  ${config.huggingface.modelId}\n`)
+
+  // Background workers
   startMarketPoller()
+  startSignalExpiryWorker()
 }
 
 bootstrap().catch((err) => {

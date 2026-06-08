@@ -7,6 +7,7 @@ interface SignalsState {
   setSignals: (signals: AISignal[]) => void
   setIsGenerating: (isGenerating: boolean) => void
   addSignal: (signal: AISignal) => void
+  updateSignal: (id: string, patch: Partial<AISignal>) => void
 }
 
 export const useSignalsStore = create<SignalsState>((set) => ({
@@ -14,5 +15,13 @@ export const useSignalsStore = create<SignalsState>((set) => ({
   isGenerating: false,
   setSignals: (signals) => set({ signals }),
   setIsGenerating: (isGenerating) => set({ isGenerating }),
-  addSignal: (signal) => set((s) => ({ signals: [signal, ...s.signals] })),
+  addSignal: (signal) =>
+    set((s) => ({
+      // Deduplicate by id
+      signals: [signal, ...s.signals.filter((x) => x.id !== signal.id)],
+    })),
+  updateSignal: (id, patch) =>
+    set((s) => ({
+      signals: s.signals.map((sig) => (sig.id === id ? { ...sig, ...patch } : sig)),
+    })),
 }))
