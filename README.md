@@ -176,3 +176,65 @@ SUPABASE_SERVICE_ROLE_KEY=
 ---
 
 *Built for the Bitget AI Challenge — Arbitex*
+
+---
+
+## Testing
+
+### Unit Tests (Vitest)
+
+```bash
+# Run all unit tests
+pnpm test
+
+# Watch mode
+pnpm test:watch
+
+# Coverage report
+pnpm test:coverage
+```
+
+**API test suites:**
+- `bitget.test.ts` — HMAC signing, ticker/candle/balance parsing
+- `kimi.test.ts` — SMA, EMA, RSI, ATR calculations + signal JSON validation
+- `utils.test.ts` — formatPrice, formatPnl, retry, safeJsonParse, sleep
+- `ws-broadcaster.test.ts` — registration, broadcasting, error removal
+- `routes.test.ts` — Fastify route integration (health, market)
+
+**Web test suites:**
+- `components.test.tsx` — Badge, Button, Stat, Input
+- `stores.test.ts` — MarketStore, PortfolioStore, SignalsStore
+
+### E2E Tests (Playwright)
+
+```bash
+cd e2e
+
+# Run all E2E tests (requires running dev server)
+pnpm test
+
+# Run with UI
+pnpm test:ui
+
+# API tests only (no browser needed)
+pnpm test:api
+
+# View last report
+pnpm report
+```
+
+**E2E suites:**
+- `auth.spec.ts` — login page, redirect, form toggle
+- `dashboard.spec.ts` — landing page, 404, UI smoke tests
+- `api.spec.ts` — health check, structured errors, rate limits, validation
+
+### CI/CD
+
+GitHub Actions runs on every push to `main` and `develop`:
+1. Unit tests + type check
+2. Build verification
+3. E2E tests against deployed preview URLs
+
+```
+.github/workflows/ci.yml
+```

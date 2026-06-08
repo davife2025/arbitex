@@ -20,6 +20,14 @@
       "cache": false,
       "persistent": true
     },
+    "test": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "test:coverage": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
     "lint": {},
     "type-check": {
       "dependsOn": ["^build"]
