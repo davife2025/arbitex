@@ -15,6 +15,7 @@ import { orderRoutes } from './routes/orders'
 
 // Plugins
 import { wsPlugin } from './plugins/ws'
+import { registerErrorHandler } from './plugins/error-handler'
 
 // Background services
 import { startMarketPoller } from './services/market-poller'
@@ -28,43 +29,66 @@ const app = Fastify({
         ? { target: 'pino-pretty', options: { colorize: true } }
         : undefined,
   },
+  trustProxy: true,   // for Railway/Render deployment
 })
 
 async function bootstrap() {
-  await app.register(helmet)
-  await app.register(cors, { origin: config.api.corsOrigin, credentials: true })
-  await app.register(rateLimit, { max: 100, timeWindow: '1 minute' })
-  await app.register(websocket)
+  // Security
+  await app.register(helmet, {
+    contentSecurityPolicy: false, // handled by Next.js
+  })
+  await app.register(cors, {
+    origin: config.api.corsOrigin,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  })
 
+  // Global rate limit (per-route overrides in rateLimiterPlugin)
+  await app.register(rateLimit, {
+    max: 120,
+    timeWindow: '1 minute',
+    errorResponseBuilder: (_req, context) => ({
+      success: false,
+      error: `Rate limit exceeded. Retry in ${Math.ceil(context.ttl / 1000)}s.`,
+      timestamp: Date.now(),
+    }),
+  })
+
+  // WebSocket
+  await app.register(websocket)
   await app.register(wsPlugin)
 
-  await app.register(healthRoutes, { prefix: '/health' })
-  await app.register(marketRoutes, { prefix: '/api/market' })
+  // REST routes
+  await app.register(healthRoutes,    { prefix: '/health' })
+  await app.register(marketRoutes,    { prefix: '/api/market' })
   await app.register(portfolioRoutes, { prefix: '/api/portfolio' })
-  await app.register(signalRoutes, { prefix: '/api/signals' })
-  await app.register(orderRoutes, { prefix: '/api/orders' })
+  await app.register(signalRoutes,    { prefix: '/api/signals' })
+  await app.register(orderRoutes,     { prefix: '/api/orders' })
 
-  app.setErrorHandler((error, _req, reply) => {
-    app.log.error(error)
-    reply.status(error.statusCode ?? 500).send({
-      success: false,
-      error: error.message,
-      timestamp: Date.now(),
-    })
-  })
+  // Structured error handling
+  registerErrorHandler(app)
+
+  // Graceful shutdown
+  const shutdown = async (signal: string) => {
+    app.log.info(`${signal} received — shutting down gracefully`)
+    await app.close()
+    process.exit(0)
+  }
+  process.on('SIGTERM', () => shutdown('SIGTERM'))
+  process.on('SIGINT', () => shutdown('SIGINT'))
 
   await app.listen({ port: config.api.port, host: '0.0.0.0' })
 
   console.log(`\n🚀 Arbitex API  →  http://localhost:${config.api.port}`)
   console.log(`📡 WebSocket    →  ws://localhost:${config.api.port}/ws`)
-  console.log(`🤖 AI Model     →  ${config.huggingface.modelId}\n`)
+  console.log(`🤖 AI Model     →  ${config.huggingface.modelId}`)
+  console.log(`🌍 Environment  →  ${process.env.NODE_ENV ?? 'development'}\n`)
 
-  // Background workers
   startMarketPoller()
   startSignalExpiryWorker()
 }
 
 bootstrap().catch((err) => {
-  console.error(err)
+  console.error('Fatal bootstrap error:', err)
   process.exit(1)
 })

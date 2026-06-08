@@ -1,8 +1,20 @@
 'use client'
 import { useWebSocket } from '@/hooks/useWebSocket'
+import { Toaster } from '@/components/ui/Toast'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
-// Mounts the WebSocket connection for the whole app
-export function Providers({ children }: { children: React.ReactNode }) {
+function WsProvider({ children }: { children: React.ReactNode }) {
   useWebSocket()
   return <>{children}</>
+}
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <ErrorBoundary>
+      <WsProvider>
+        {children}
+        <Toaster />
+      </WsProvider>
+    </ErrorBoundary>
+  )
 }
