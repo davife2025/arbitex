@@ -1,29 +1,112 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   --brand: #00E5FF;
-  --surface: #0D0F14;
-  --surface-card: #131720;
-  --surface-border: #1E2433;
+  --brand-dim: rgba(0,229,255,0.12);
+  --brand-glow: rgba(0,229,255,0.35);
+  --surface: #080A0F;
+  --surface-card: #0E1118;
+  --surface-elevated: #141820;
+  --surface-border: #1C2235;
+  --surface-border-bright: #2A3450;
   --success: #00C48C;
+  --success-dim: rgba(0,196,140,0.12);
   --danger: #FF4757;
+  --danger-dim: rgba(255,71,87,0.12);
   --warning: #FFB800;
+  --warning-dim: rgba(255,184,0,0.12);
+  --text-primary: #E8EDF8;
+  --text-secondary: #6B7A99;
+  --text-tertiary: #3D4A66;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+html { scroll-behavior: smooth; }
+
 body {
   background-color: var(--surface);
-  color: white;
-  font-family: 'Inter', sans-serif;
+  color: var(--text-primary);
+  font-family: 'Syne', sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-.font-mono { font-family: 'JetBrains Mono', monospace; }
+/* Scanline overlay for trading terminal feel */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.font-mono { font-family: 'DM Mono', monospace; }
+.font-display { font-family: 'Syne', sans-serif; }
+
+/* Glow effects */
+.glow-brand { box-shadow: 0 0 20px var(--brand-glow); }
+.glow-success { box-shadow: 0 0 20px rgba(0,196,140,0.3); }
+.glow-danger { box-shadow: 0 0 20px rgba(255,71,87,0.3); }
+.text-glow-brand { text-shadow: 0 0 20px var(--brand-glow); }
+
+/* Card style */
+.card {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+}
+
+.card-elevated {
+  background: var(--surface-elevated);
+  border: 1px solid var(--surface-border-bright);
+  border-radius: 12px;
+}
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: var(--surface); }
-::-webkit-scrollbar-thumb { background: var(--surface-border); border-radius: 2px; }
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface-border-bright); border-radius: 2px; }
+
+/* Animations */
+@keyframes pulse-brand {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-slide-up { animation: slide-up 0.4s ease forwards; }
+.animate-fade-in { animation: fade-in 0.3s ease forwards; }
+.animate-pulse-brand { animation: pulse-brand 2s ease-in-out infinite; }
+
+/* Number flash on update */
+@keyframes flash-green {
+  0% { color: var(--success); }
+  100% { color: inherit; }
+}
+
+@keyframes flash-red {
+  0% { color: var(--danger); }
+  100% { color: inherit; }
+}
+
+.flash-up { animation: flash-green 0.6s ease; }
+.flash-down { animation: flash-red 0.6s ease; }
