@@ -1,0 +1,20 @@
+{
+  "name": "Arbitex — AI Trading",
+  "short_name": "Arbitex",
+  "description": "AI-powered trading infrastructure built on Bitget × Kimi K2",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#080A0F",
+  "theme_color": "#00E5FF",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable any" }
+  ],
+  "shortcuts": [
+    { "name": "Dashboard", "url": "/dashboard", "description": "Open trading dashboard" },
+    { "name": "AI Signals", "url": "/dashboard/signals", "description": "View AI signals" },
+    { "name": "Paper Trade", "url": "/dashboard/paper", "description": "Paper trading" }
+  ],
+  "categories": ["finance", "productivity"]
+}

@@ -238,3 +238,98 @@ GitHub Actions runs on every push to `main` and `develop`:
 ```
 .github/workflows/ci.yml
 ```
+
+---
+
+## Session 7 — Advanced AI
+
+### Multi-Timeframe Confluence
+`apps/api/src/services/confluence.ts`
+
+Analyzes 1h (25%), 4h (40%), 1d (35%) weighted timeframes. Each TF scored via EMA cross, SMA trend, RSI momentum, and volume confirmation. Composite score ranges from -1 (strong bear) to +1 (strong bull). Confidence determined by alignment ratio and score magnitude.
+
+### Position Sizing (Kelly Criterion)
+`apps/api/src/services/position-sizer.ts`
+
+Half-Kelly sizing based on estimated win probability (from confluence confidence + alignment) and R:R ratio. Capped by:
+- Max risk per trade (default 1% of equity)
+- Max position size (default 10% of equity)
+- Available balance
+- Confidence penalty (low confidence → 50% size reduction)
+
+### Signal Backtesting
+`apps/api/src/services/backtester.ts`
+
+Simulates stored signals against historical candles from Supabase. Reports: win rate, profit factor, Sharpe ratio, max drawdown, avg win/loss, full trade log with entry/exit/bars held.
+
+### New API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /api/signals/advanced | Confluence + Kimi K2 + Kelly sizing |
+| GET  | /api/signals/confluence/:symbol | Multi-TF confluence only |
+| POST | /api/signals/size | Position sizing for custom levels |
+| GET  | /api/signals/backtest/:symbol | Backtest stored signals |
+| GET  | /api/signals/backtest-summary | Backtest all top 5 symbols |
+
+---
+
+## Session 8 — Alerts
+
+### Email Alerts (Resend)
+HTML email templates styled to match the Arbitex dark theme. Sent via the Resend REST API — no SMTP setup needed. Each email includes: symbol, direction badge, confidence badge, entry/target/stop price table, R:R ratio, and AI reasoning.
+
+### Telegram Alerts (Bot API)
+Markdown-formatted messages sent via Telegram Bot API. Supports signal alerts and position alerts (stop hit / target reached). Includes `/test` endpoint to verify bot connection before going live.
+
+### Alert Events
+| Event | Description |
+|---|---|
+| `signal_generated` | New AI signal created |
+| `signal_triggered` | Signal entry price hit |
+| `signal_expired` | Signal TTL elapsed without trigger |
+| `stop_hit` | Position stopped out |
+| `target_hit` | Position reached take-profit |
+
+### New API Endpoints
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | /api/alerts/preferences/:userId | Fetch alert prefs |
+| POST | /api/alerts/preferences | Save alert prefs |
+| POST | /api/alerts/test/telegram | Test Telegram connection |
+| POST | /api/alerts/test/email | Test email delivery |
+| GET | /api/alerts/log/:userId | Alert history |
+| GET | /api/alerts/log/:userId/stats | Success/fail counts |
+
+### New Environment Variables
+```env
+RESEND_API_KEY=re_your_key          # https://resend.com
+ALERT_FROM_EMAIL=alerts@arbitex.io  # verified sender domain
+TELEGRAM_BOT_TOKEN=123:your_token   # https://t.me/BotFather
+```
+
+---
+
+## Session 9 — Performance Analytics
+
+### Signal Outcome Tracking
+Every resolved signal (win / loss / expired) is recorded in `signal_outcomes` with: exit price, PnL %, PnL USDT, R:R ratio, bars held, model used. The expiry worker now auto-records expired outcomes.
+
+### Performance Summary
+`GET /api/performance/summary?days=30` returns:
+- Win rate, avg win/loss %, total PnL %, profit factor, Sharpe ratio, avg R:R
+- Equity curve (cumulative PnL over time)
+- Breakdown by symbol and by confidence level
+- Best and worst signal
+
+### Daily Snapshots
+Hourly background worker snapshots daily performance to `performance_snapshots` for trend analysis.
+
+### New API Endpoints
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | /api/performance/summary | Full performance summary |
+| GET | /api/performance/outcomes | Paginated outcome list |
+| POST | /api/performance/record | Manually record outcome |
+| GET | /api/performance/snapshots | Daily snapshot history |
+| GET | /api/performance/leaderboard | Top performing symbols |

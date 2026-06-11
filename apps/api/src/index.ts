@@ -6,89 +6,103 @@ import rateLimit from '@fastify/rate-limit'
 import websocket from '@fastify/websocket'
 import { config } from '@arbitex/config'
 
-// Routes
-import { healthRoutes } from './routes/health'
-import { marketRoutes } from './routes/market'
-import { portfolioRoutes } from './routes/portfolio'
-import { signalRoutes } from './routes/signals'
-import { orderRoutes } from './routes/orders'
+import { healthRoutes }         from './routes/health'
+import { marketRoutes }         from './routes/market'
+import { portfolioRoutes }      from './routes/portfolio'
+import { signalRoutes }         from './routes/signals'
+import { orderRoutes }          from './routes/orders'
+import { advancedSignalRoutes } from './routes/advanced-signals'
+import { alertRoutes }          from './routes/alerts'
+import { performanceRoutes }    from './routes/performance'
+import { paperTradingRoutes }   from './routes/paper-trading'
+import { watchlistRoutes }      from './routes/watchlist'
+import { strategyRoutes }       from './routes/strategies'
+import { riskRoutes }           from './routes/risk'
+import { orderBookRoutes }      from './routes/orderbook'
+import { commentaryRoutes }     from './routes/commentary'
+import { accountRoutes }        from './routes/accounts'
+import { journalRoutes }        from './routes/journal'
+import { notificationRoutes }   from './routes/notifications'
+import { rateLimitRoutes }      from './routes/rate-limits'
 
-// Plugins
-import { wsPlugin } from './plugins/ws'
+import { wsPlugin }             from './plugins/ws'
 import { registerErrorHandler } from './plugins/error-handler'
 
-// Background services
-import { startMarketPoller } from './services/market-poller'
+import { startMarketPoller }       from './services/market-poller'
 import { startSignalExpiryWorker } from './services/signal-expiry'
+import { startSnapshotWorker }     from './services/snapshot-worker'
+import { startStrategyRunner }     from './services/strategy-runner'
+import { startCommentaryWorker }   from './services/commentary-worker'
 
 const app = Fastify({
   logger: {
     level: process.env.NODE_ENV === 'production' ? 'warn' : 'info',
-    transport:
-      process.env.NODE_ENV !== 'production'
-        ? { target: 'pino-pretty', options: { colorize: true } }
-        : undefined,
+    transport: process.env.NODE_ENV !== 'production'
+      ? { target: 'pino-pretty', options: { colorize: true } }
+      : undefined,
   },
-  trustProxy: true,   // for Railway/Render deployment
+  trustProxy: true,
 })
 
 async function bootstrap() {
-  // Security
-  await app.register(helmet, {
-    contentSecurityPolicy: false, // handled by Next.js
-  })
+  await app.register(helmet, { contentSecurityPolicy: false })
   await app.register(cors, {
-    origin: config.api.corsOrigin,
-    credentials: true,
+    origin: config.api.corsOrigin, credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   })
-
-  // Global rate limit (per-route overrides in rateLimiterPlugin)
   await app.register(rateLimit, {
-    max: 120,
-    timeWindow: '1 minute',
+    max: 120, timeWindow: '1 minute',
     errorResponseBuilder: (_req, context) => ({
       success: false,
       error: `Rate limit exceeded. Retry in ${Math.ceil(context.ttl / 1000)}s.`,
       timestamp: Date.now(),
     }),
   })
-
-  // WebSocket
   await app.register(websocket)
   await app.register(wsPlugin)
 
-  // REST routes
-  await app.register(healthRoutes,    { prefix: '/health' })
-  await app.register(marketRoutes,    { prefix: '/api/market' })
-  await app.register(portfolioRoutes, { prefix: '/api/portfolio' })
-  await app.register(signalRoutes,    { prefix: '/api/signals' })
-  await app.register(orderRoutes,     { prefix: '/api/orders' })
+  await app.register(healthRoutes,         { prefix: '/health' })
+  await app.register(marketRoutes,         { prefix: '/api/market' })
+  await app.register(portfolioRoutes,      { prefix: '/api/portfolio' })
+  await app.register(signalRoutes,         { prefix: '/api/signals' })
+  await app.register(advancedSignalRoutes, { prefix: '/api/signals' })
+  await app.register(orderRoutes,          { prefix: '/api/orders' })
+  await app.register(alertRoutes,          { prefix: '/api/alerts' })
+  await app.register(performanceRoutes,    { prefix: '/api/performance' })
+  await app.register(paperTradingRoutes,   { prefix: '/api/paper' })
+  await app.register(watchlistRoutes,      { prefix: '/api/watchlist' })
+  await app.register(strategyRoutes,       { prefix: '/api/strategies' })
+  await app.register(riskRoutes,           { prefix: '/api/risk' })
+  await app.register(orderBookRoutes,      { prefix: '/api/orderbook' })
+  await app.register(commentaryRoutes,     { prefix: '/api/commentary' })
+  await app.register(accountRoutes,        { prefix: '/api/accounts' })
+  await app.register(journalRoutes,        { prefix: '/api/journal' })
+  await app.register(notificationRoutes,   { prefix: '/api/notifications' })
+  await app.register(rateLimitRoutes,      { prefix: '/api/rate-limits' })
 
-  // Structured error handling
   registerErrorHandler(app)
 
-  // Graceful shutdown
-  const shutdown = async (signal: string) => {
-    app.log.info(`${signal} received — shutting down gracefully`)
-    await app.close()
-    process.exit(0)
+  const shutdown = async (sig: string) => {
+    app.log.info(`${sig} — shutting down`)
+    await app.close(); process.exit(0)
   }
   process.on('SIGTERM', () => shutdown('SIGTERM'))
-  process.on('SIGINT', () => shutdown('SIGINT'))
+  process.on('SIGINT',  () => shutdown('SIGINT'))
 
   await app.listen({ port: config.api.port, host: '0.0.0.0' })
 
-  console.log(`\n🚀 Arbitex API  →  http://localhost:${config.api.port}`)
-  console.log(`📡 WebSocket    →  ws://localhost:${config.api.port}/ws`)
-  console.log(`🤖 AI Model     →  ${config.huggingface.modelId}`)
-  console.log(`🌍 Environment  →  ${process.env.NODE_ENV ?? 'development'}\n`)
+  console.log(`\n🚀 Arbitex API   →  http://localhost:${config.api.port}`)
+  console.log(`📡 WebSocket     →  ws://localhost:${config.api.port}/ws`)
+  console.log(`📓 Journal       →  Trade journal with mood + tags`)
+  console.log(`🔔 Notifications →  In-app + WS push`)
+  console.log(`📊 Rate Limits   →  Bitget quota tracking`)
+  console.log(`🌍 Environment   →  ${process.env.NODE_ENV ?? 'development'}\n`)
 
   startMarketPoller()
   startSignalExpiryWorker()
+  startSnapshotWorker()
+  startStrategyRunner()
+  startCommentaryWorker()
 }
 
-bootstrap().catch((err) => {
-  console.error('Fatal bootstrap error:', err)
-  process.exit(1)
-})
+bootstrap().catch(err => { console.error(err); process.exit(1) })
